@@ -1,0 +1,71 @@
+plugins {
+    id 'java'
+    id 'net.serenity-bdd.serenity-gradle-plugin' version '5.3.3'
+}
+
+group = 'com.miejemplo'
+version = '1.0-SNAPSHOT'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // ── Selenium WebDriver 4.x ───────────────────────────────────────────────
+    testImplementation 'org.seleniumhq.selenium:selenium-java:4.18.1'
+
+    // ── WebDriverManager (gestión automática del driver del navegador) ────────
+    testImplementation 'io.github.bonigarcia:webdrivermanager:5.8.0'
+
+    // ── Cucumber 7.x ─────────────────────────────────────────────────────────
+    testImplementation 'io.cucumber:cucumber-java:7.15.0'
+    testImplementation 'io.cucumber:cucumber-junit-platform-engine:7.15.0'
+
+    // ── JUnit 5 ───────────────────────────────────────────────────────────────
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testImplementation 'org.junit.platform:junit-platform-suite:1.10.2'
+
+    // ── AssertJ (aserciones fluidas) ──────────────────────────────────────────
+    testImplementation 'org.assertj:assertj-core:3.25.3'
+
+    // ── SerenityBDD ───────────────────────────────────────────────────────────
+    testImplementation 'net.serenity-bdd:serenity-core:5.3.3'
+    testImplementation 'net.serenity-bdd:serenity-cucumber:5.3.3'
+}
+
+// ── Configuración del plugin SerenityBDD ─────────────────────────────────────
+// testRoot: dónde busca el aggregate los JSON de resultados escritos por el reporter
+// requirementsBaseDir: dónde están los features para el reporte de requerimientos
+serenity {
+    testRoot           = "target/site/serenity"
+    requirementsBaseDir = "src/test/resources"
+    outputDirectory    = "target/site/serenity"
+}
+
+test {
+    useJUnitPlatform()
+    systemProperty 'cucumber.junit-platform.naming-strategy', 'long'
+    // Pasar la URL base como propiedad de sistema: -Dbase.url=http://localhost:5173
+    systemProperty 'base.url', System.getProperty('base.url', 'http://localhost:5173')
+    // Indicar al reporter dónde escribir los JSON de resultados
+    systemProperty 'serenity.outputDirectory', "${project.projectDir}/target/site/serenity"
+    // Generar el reporte Serenity automáticamente al terminar los tests
+    finalizedBy aggregate
+}
+
+// ── Servidor local para visualizar los reportes en http://localhost:9000 ─────
+// Uso: ./gradlew serveReports
+task serveReports(type: Exec, dependsOn: aggregate) {
+    group = 'reporting'
+    description = 'Sirve el reporte Serenity en http://localhost:9000 (requiere Python 3)'
+    commandLine 'python3', '-m', 'http.server', '9000',
+                '--directory', "${project.projectDir}/target/site/serenity"
+    doFirst {
+        println "\n  Reporte disponible en: http://localhost:9000\n  Ctrl+C para detener.\n"
+    }
+}
